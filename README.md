@@ -16,6 +16,7 @@ My experiments in weaponizing [Nim](https://nim-lang.org/) for implant developme
   * [Interfacing with C/C++](#interfacing-with-cc)
   * [Creating Windows DLLs with an exported DllMain](#creating-windows-dlls-with-an-exported-dllmain)
   * [Optimizing executables for size](#optimizing-executables-for-size)
+  * [Reflectively Loading Nim Executables](#reflectively-loading-nim-executables)
   * [Executable size difference with the Winim Library](#executable-size-difference-when-using-the-winim-library-vs-without)
   * [Opsec Considirations](#opsec-considerations)
   * [Converting C Code to Nim](#converting-c-code-to-nim)
@@ -25,6 +26,7 @@ My experiments in weaponizing [Nim](https://nim-lang.org/) for implant developme
   * [Pitfalls I found myself falling into](#pitfalls-i-found-myself-falling-into)
   * [Interesting Nim Libraries](#interesting-nim-libraries)
   * [Nim for Implant Dev Links](#nim-for-implant-dev-links)
+  * [Contributors](#contributors)
 
 ## Why Nim?
 
@@ -37,26 +39,49 @@ My experiments in weaponizing [Nim](https://nim-lang.org/) for implant developme
 - The Nim compiler and the generated executables support all major platforms like Windows, Linux, BSD and macOS. Can even compile to Nintendo switch , IOS & Android. See the cross-compilation section in the [Nim compiler usage guide](https://nim-lang.github.io/Nim/nimc.html#crossminuscompilation)
 - You could *technically* write your implant and c2 backend both in Nim as you can compile your code directly to Javascript. Even has some [initial support for WebAssembly's](https://forum.nim-lang.org/t/4779) 
 
-## Examples in this Repo
+## Examples in this repo that work
 
 | File | Description |
 | ---  | --- |
-| `pop_bin.nim` | Call `MessageBox` WinApi *without* using the Winim library |
-| `pop_winim_bin.nim` | Call `MessageBox` *with* the Winim libary |
-| `pop_winim_lib.nim` | Example of creating a Windows DLL with an exported `DllMain` |  
-| `wmiquery_bin.nim` | Queries running processes and installed AVs using using WMI |
-| `shellcode_bin.nim` | Creates a suspended process and injects shellcode with `VirtualAllocEx`/`CreateRemoteThread`. Also demonstrates the usage of compile time definitions to detect arch, os etc..| 
-| `passfilter_lib.nim` | Log password changes to a file by (ab)using a password complexity filter |
-| `minidump_bin.nim` | Creates a memory dump of lsass using `MiniDumpWriteDump` |
-| `http_request_bin.nim` | Demonstrates a couple of ways of making HTTP requests |
-| `execute_sct_bin.nim` | `.sct` file Execution via `GetObject()` |
-| `scriptcontrol_bin.nim` | Dynamically execute VBScript and JScript using the `MSScriptControl` COM object | 
-| `excel_com_bin.nim` | Injects shellcode using the Excel COM object and Macros |
-| `keylogger_bin.nim` | Keylogger using `SetWindowsHookEx` |
-| `amsi_patch_bin.nim` | Patches AMSI out of the current process (**Bugged, but compiles. Help appreciated**) |
-| `clr_bin.nim` | Hosts the CLR and executes .NET assemblies (**WIP, help appreciated**) | 
-| `amsi_patch_2_bin.nim` | Patches AMSI out of the current process using a different method (**WIP, help appreciated**) |
-| `excel_4_com_bin.nim` | Injects shellcode using the Excel COM object and Excel 4 Macros (**WIP**) |
+| [pop_bin.nim](../master/src/pop_bin.nim) | Call `MessageBox` WinApi *without* using the Winim library |
+| [pop_winim_bin.nim](../master/src/pop_winim_bin.nim) | Call `MessageBox` *with* the Winim libary |
+| [pop_winim_lib.nim](../master/src/pop_winim_lib.nim) | Example of creating a Windows DLL with an exported `DllMain` |
+| [execute_assembly_bin.nim](../master/src/execute_assembly_bin.nim) | Hosts the CLR, reflectively executes .NET assemblies from memory |
+| [clr_host_cpp_embed_bin.nim](../master/src/clr_host_cpp_embed_bin.nim) | Hosts the CLR by directly embedding C++ code, executes a .NET assembly from disk |
+| [scshell_c_embed_bin.nim](../master/src/scshell_c_embed_bin.nim) | Shows how to quickly weaponize existing C code by embedding [SCShell](https://github.com/Mr-Un1k0d3r/SCShell) (C) directly within Nim |
+| [fltmc_bin.nim](../master/src/fltmc_bin.nim) | Enumerates all Minifilter drivers |
+| [blockdlls_acg_ppid_spoof_bin.nim](../master/src/blockdlls_acg_ppid_spoof_bin.nim) | Creates a suspended process that spoofs its PPID to explorer.exe, also enables BlockDLLs and ACG |
+| [named_pipe_client_bin.nim](../master/src/named_pipe_client_bin.nim) | Named Pipe Client |
+| [named_pipe_server_bin.nim](../master/src/named_pipe_server_bin.nim) | Named Pipe Server |
+| [embed_rsrc_bin.nim](../master/src/embed_rsrc_bin.nim) | Embeds a resource (zip file) at compile time and extracts contents at runtime |
+| [self_delete_bin.nim](../master/src/self_delete_bin.nim) | A way to delete a locked or current running executable on disk. Method discovered by [@jonasLyk](https://twitter.com/jonasLyk/status/1350401461985955840) |
+| [encrypt_decrypt_bin.nim](../master/src/encrypt_decrypt_bin.nim) | Encryption/Decryption using AES256 (CTR Mode) using the [Nimcrypto](https://github.com/cheatfate/nimcrypto) library |
+| [amsi_patch_bin.nim](../master/src/amsi_patch_bin.nim) | Patches AMSI out of the current process |
+| [etw_patch_bin.nim](../master/src/etw_patch_bin.nim) | Patches ETW out of the current process (Contributed by ) |
+| [wmiquery_bin.nim](../master/src/wmiquery_bin.nim) | Queries running processes and installed AVs using using WMI |
+| [out_compressed_dll_bin.nim](../master/src/out_compressed_dll_bin.nim) | Compresses, Base-64 encodes and outputs PowerShell code to load a managed dll in memory. Port of the orignal PowerSploit script to Nim. |
+| [dynamic_shellcode_local_inject_bin.nim](../master/src/dynamic_shellcode_local_inject_bin.nim) | POC to locally inject shellcode recovered dynamically instead of hardcoding it in an array. | 
+| [shellcode_callback_bin.nim](../master/src/shellcode_callback_bin.nim) | Executes shellcode using Callback functions |
+| [shellcode_bin.nim](../master/src/shellcode_bin.nim) | Creates a suspended process and injects shellcode with `VirtualAllocEx`/`CreateRemoteThread`. Also demonstrates the usage of compile time definitions to detect arch, os etc..|
+| [shellcode_inline_asm_bin.nim](../master/src/shellcode_inline_asm_bin.nim) | Executes shellcode using inline assembly |
+| [syscalls_bin.nim](../master/src/syscalls_bin.nim) | Shows how to make direct system calls |
+| [execute_powershell_bin.nim](../master/src/execute_powershell_bin.nim) | Hosts the CLR & executes PowerShell through an un-managed runspace |
+| [passfilter_lib.nim](../master/src/passfilter_lib.nim) | Log password changes to a file by (ab)using a password complexity filter |
+| [minidump_bin.nim](../master/src/minidump_bin.nim) | Creates a memory dump of lsass using `MiniDumpWriteDump` |
+| [http_request_bin.nim](../master/src/http_request_bin.nim) | Demonstrates a couple of ways of making HTTP requests |
+| [execute_sct_bin.nim](../master/src/execute_sct_bin.nim) | `.sct` file Execution via `GetObject()` |
+| [scriptcontrol_bin.nim](../master/src/scriptcontrol_bin.nim) | Dynamically execute VBScript and JScript using the `MSScriptControl` COM object |
+| [excel_com_bin.nim](../master/src/excel_com_bin.nim) | Injects shellcode using the Excel COM object and Macros |
+| [keylogger_bin.nim](../master/src/keylogger_bin.nim) | Keylogger using `SetWindowsHookEx` |
+| [memfd_python_interpreter_bin.nim](../master/src/memfd_python_interpreter_bin.nim) | Use `memfd_create` syscall to load a binary into an anonymous file and execute it with `execve` syscall. |
+| [uuid_exec_bin.nim](../master/src/uuid_exec_bin.nim) | Plants shellcode from UUID array into heap space and uses `EnumSystemLocalesA` Callback in order to execute the shellcode. |
+
+## Examples that are a WIP
+
+| File | Description |
+| ---  | --- |
+| [amsi_patch_2_bin.nim](../master/wip/amsi_patch_2_bin.nim) | Patches AMSI out of the current process using a different method (**WIP, help appreciated**) |
+| [excel_4_com_bin.nim](../master/wip/excel_4_com_bin.nim) | Injects shellcode using the Excel COM object and Excel 4 Macros (**WIP**) |
 
 ## Compiling the examples in this repo
 
@@ -68,6 +93,7 @@ This repo was setup to cross-compile the example Nim source files to Windows fro
 
 - `brew install nim`
 - `apt install nim`
+- `choco install nim`
 
 (Nim also provides a docker image but don't know how it works when it comes to cross-compiling, need to look into this)
 
@@ -77,9 +103,9 @@ Install the `Mingw` toolchain needed for cross-compilation to Windows (Not neede
 - *nix: `apt-get install mingw-w64`
 - MacOS: `brew install mingw-w64`
 
-Finally, install the magnificent [Winim](https://github.com/khchen/winim) library:
+Finally, install the magnificent [Winim](https://github.com/khchen/winim) library, along with [zippy](https://github.com/guzba/zippy/) and [nimcrypto](https://github.com/cheatfate/nimcrypto)
 
-- `nimble install winim`
+- `nimble install winim zippy nimcrypto`
 
 Then cd into the root of this repository and run `make`.
 
@@ -161,6 +187,21 @@ Additionally, I've found you can squeeze a few more bytes out by passing `--pass
 
 These flags decrease sizes **dramatically**: the shellcode injection example goes from 484.3 KB to 46.5 KB when cross-compiled from MacOSX!
 
+## Reflectively Loading Nim Executables
+
+Huge thanks to [@Shitsecure](https://twitter.com/ShitSecure) for figuring this out!
+
+By default, Nim doesn't generate PE's with a relocation table which is needed by most tools that reflectively load EXE's.
+
+To generate a Nim executable *with* a relocation section you need to pass a few additional flags to the linker. 
+
+Specifically: ```--passL:-Wl,--dynamicbase```
+
+Full example command:
+```
+nim c --passL:-Wl,--dynamicbase my_awesome_malwarez.nim
+```
+
 ## Executable size difference when using the Winim library vs without
 
 Incredibly enough the size difference is pretty negligible. Especially when you apply the size optimizations outlined above.
@@ -217,6 +258,30 @@ See [this blog post for more](https://nim-lang.org/blog/2017/10/02/documenting-p
 
 VSCode has a Nim extension which works pretty well. This also seems to be the only option at this point.
 
+You can automatically compile Nim code from within visual studio by following these steps:
+
+1. Add `Code Runner` as an Extension to your Visual Studio Code  you can do this by browsing to the extensions tab and searching for code runner: 
+![code-runner](https://user-images.githubusercontent.com/5151193/104265646-4ad9cc00-544b-11eb-9444-2b74c8da1051.png)
+
+2. After installing Code Runner you can configure it in Visual Studio code by pressing (`Ctrl+,` on Windows or `Ctrl+Shift+p` on Mac). You could also browse to the settings menu as follows: <br>
+    - On Windows/Linux File > Preferences > Settings
+    - On MacOS Code > Preferences > Settings
+
+Once you are in the settings window type `code-runner.executor`
+![executor](https://user-images.githubusercontent.com/5151193/104265662-5200da00-544b-11eb-910f-e9065b6dbbb9.JPG)
+
+From here on out you could choose to change the nim execution by modifying the `executorMap` or you could change the `execution by Glob`. 
+Personally I'd recommend modifying the glob, an example would be as follows: 
+![globExamples](https://user-images.githubusercontent.com/5151193/104265666-53ca9d80-544b-11eb-8016-9b62d1c17919.JPG)
+
+This configuration will compile any nim file that has gui in it's name to a gui application, and will drop them in the compiled-gui folder of the directory your nim file is in.
+Once you save the configuration, you can now press the play button in VSC and your code will compile itself:
+![playbutton-pressed](https://user-images.githubusercontent.com/5151193/104265669-54fbca80-544b-11eb-92a4-171f16f01637.JPG)
+
+And it will indeed be in the correct folder as well.
+![compiled-in-guidir](https://user-images.githubusercontent.com/5151193/104265660-50cfad00-544b-11eb-931b-17af0166d317.JPG)
+
+
 ## Pitfalls I found myself falling into
 
 - When calling winapi's with Winim and trying to pass a null value, make sure you pass the `NULL` value (defined within the Winim library) as supposed Nim's builtin `nil` value. (Ugh)
@@ -262,3 +327,12 @@ var buf: array[5, byte] = [byte 0xfc,0x48,0x81,0xe4,0xf0,0xff]
 - https://github.com/MythicAgents/Nimplant
 - https://github.com/elddy/Nim-SMBExec
 - https://github.com/elddy/NimScan
+
+## Contributors 
+
+- [@ShitSecure](https://twitter.com/ShitSecure)
+- [@VVX7](https://twitter.com/VV_X_7)
+- [@checkymander](https://twitter.com/checkymander)
+- Kiran Patel
+- [@frknayar](https://twitter.com/frknayar)
+- [@OffenseTeacher](https://twitter.com/OffenseTeacher)
