@@ -12,6 +12,8 @@ My experiments in weaponizing [Nim](https://nim-lang.org/) for implant developme
   * [Why Nim?](#why-nim)
   * [Examples in this repo](#examples-in-this-repo)
   * [Compiling the examples](#compiling-the-examples-in-this-repo)
+    + [Easy Way (Recommended)](#easy-way-recommended)
+    + [Hard Way (For the Bold)](#hard-way-for-the-bold)
   * [Cross Compiling](#cross-compiling)
   * [Interfacing with C/C++](#interfacing-with-cc)
   * [Creating Windows DLLs with an exported DllMain](#creating-windows-dlls-with-an-exported-dllmain)
@@ -75,6 +77,12 @@ My experiments in weaponizing [Nim](https://nim-lang.org/) for implant developme
 | [keylogger_bin.nim](../master/src/keylogger_bin.nim) | Keylogger using `SetWindowsHookEx` |
 | [memfd_python_interpreter_bin.nim](../master/src/memfd_python_interpreter_bin.nim) | Use `memfd_create` syscall to load a binary into an anonymous file and execute it with `execve` syscall. |
 | [uuid_exec_bin.nim](../master/src/uuid_exec_bin.nim) | Plants shellcode from UUID array into heap space and uses `EnumSystemLocalesA` Callback in order to execute the shellcode. |
+| [unhookc.nim](../master/src/unhookc.nim) | Unhooks ntdll.dll to evade EDR/AV hooks (embeds the C code template from [ired.team](https://www.ired.team/offensive-security/defense-evasion/how-to-unhook-a-dll-using-c++)) |
+| [unhook.nim](../master/src/unhook.nim) | Unhooks ntdll.dll to evade EDR/AV hooks (pure nim implementation) |
+| [taskbar_ewmi_bin.nim](../master/src/taskbar_ewmi_bin.nim) | Uses Extra Window Memory Injection via Running Application property of TaskBar in order to execute the shellcode. |
+| [fork_dump_bin.nim](../master/src/fork_dump_bin.nim) | (ab)uses Window's implementation of `fork()` and acquires a handle to a remote process using the PROCESS_CREATE_PROCESS access right. It then attempts to dump the forked processes memory using `MiniDumpWriteDump()` |
+| [ldap_query_bin.nim](../master/src/ldap_query_bin.nim) | Perform LDAP queries via COM by using ADO's ADSI provider |
+| [sandbox_process_bin.nim](../master/src/sandbox_process_bin.nim) | This sandboxes a process by setting it's integrity level to Untrusted and strips important tokens. This can be used to "silently disable" a PPL process (e.g. AV/EDR) |
 
 ## Examples that are a WIP
 
@@ -85,17 +93,21 @@ My experiments in weaponizing [Nim](https://nim-lang.org/) for implant developme
 
 ## Compiling the examples in this repo
 
-This repository does not provide binaries, you're gonna have to compile them yourself.
+This repository does not provide binaries, you're gonna have to compile them yourself. This repo was setup to cross-compile the example Nim source files to Windows from Linux or MacOS.
 
-This repo was setup to cross-compile the example Nim source files to Windows from *nix/MacOS, however they should work just fine directly compiling them on Windows (Don't think you'll be able to use the Makefile tho which compiles them all in one go).
+### Easy Way (Recommended)
 
-[Install Nim](https://nim-lang.org/install_unix.html) using your systems package manager (for windows [use the installer on the official website](https://nim-lang.org/install_windows.html))
+Use [VSCode Devcontainers](https://code.visualstudio.com/docs/remote/create-dev-container) to automatically setup a development environment for you (See the [Setting Up a Dev Environment](#setting-up-a-dev-environment) section). Once that's done simply run `make`.
+
+### Hard way (For the bold)
+
+[Install Nim](https://nim-lang.org/install_unix.html) using your systems package manager (for Windows [use the installer on the official website](https://nim-lang.org/install_windows.html))
 
 - `brew install nim`
 - `apt install nim`
 - `choco install nim`
 
-(Nim also provides a docker image but don't know how it works when it comes to cross-compiling, need to look into this)
+(Nim also provides a [docker image on Dockerhub](https://hub.docker.com/r/nimlang/nim/))
 
 You should now have the `nim` & `nimble` commands available, the former is the Nim compiler and the latter is Nim's package manager.
 
@@ -256,31 +268,14 @@ See [this blog post for more](https://nim-lang.org/blog/2017/10/02/documenting-p
 
 ## Setting up a dev environment
 
-VSCode has a Nim extension which works pretty well. This also seems to be the only option at this point.
+This repository supports [VSCode Devcontainers](https://code.visualstudio.com/docs/remote/create-dev-container) which allows you to develop in a Docker container. This automates setting up a development environment for you.
 
-You can automatically compile Nim code from within visual studio by following these steps:
+1. Install VSCode and Docker desktop
+2. Clone this repo and open it in VSCode
+3. Install the `Visual Studio Code Remote - Containers` extension
+4. Open the command pallete and select `Remote-Containers: Reopen in Container` command
 
-1. Add `Code Runner` as an Extension to your Visual Studio Code  you can do this by browsing to the extensions tab and searching for code runner: 
-![code-runner](https://user-images.githubusercontent.com/5151193/104265646-4ad9cc00-544b-11eb-9444-2b74c8da1051.png)
-
-2. After installing Code Runner you can configure it in Visual Studio code by pressing (`Ctrl+,` on Windows or `Ctrl+Shift+p` on Mac). You could also browse to the settings menu as follows: <br>
-    - On Windows/Linux File > Preferences > Settings
-    - On MacOS Code > Preferences > Settings
-
-Once you are in the settings window type `code-runner.executor`
-![executor](https://user-images.githubusercontent.com/5151193/104265662-5200da00-544b-11eb-910f-e9065b6dbbb9.JPG)
-
-From here on out you could choose to change the nim execution by modifying the `executorMap` or you could change the `execution by Glob`. 
-Personally I'd recommend modifying the glob, an example would be as follows: 
-![globExamples](https://user-images.githubusercontent.com/5151193/104265666-53ca9d80-544b-11eb-8016-9b62d1c17919.JPG)
-
-This configuration will compile any nim file that has gui in it's name to a gui application, and will drop them in the compiled-gui folder of the directory your nim file is in.
-Once you save the configuration, you can now press the play button in VSC and your code will compile itself:
-![playbutton-pressed](https://user-images.githubusercontent.com/5151193/104265669-54fbca80-544b-11eb-92a4-171f16f01637.JPG)
-
-And it will indeed be in the correct folder as well.
-![compiled-in-guidir](https://user-images.githubusercontent.com/5151193/104265660-50cfad00-544b-11eb-931b-17af0166d317.JPG)
-
+VScode will now build the Docker image (will take a bit) and put you right into your pre-built Nim dev environment!
 
 ## Pitfalls I found myself falling into
 
