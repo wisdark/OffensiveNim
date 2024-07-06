@@ -9,26 +9,30 @@ My experiments in weaponizing [Nim](https://nim-lang.org/) for implant developme
 ## Table of Contents
 
 - [OffensiveNim](#offensivenim)
-  * [Why Nim?](#why-nim)
-  * [Examples in this repo](#examples-in-this-repo-that-work)
-  * [Compiling the examples](#compiling-the-examples-in-this-repo)
-    + [Easy Way (Recommended)](#easy-way-recommended)
-    + [Hard Way (For the Bold)](#hard-way-for-the-bold)
-  * [Cross Compiling](#cross-compiling)
-  * [Interfacing with C/C++](#interfacing-with-cc)
-  * [Creating Windows DLLs with an exported DllMain](#creating-windows-dlls-with-an-exported-dllmain)
-  * [Optimizing executables for size](#optimizing-executables-for-size)
-  * [Reflectively Loading Nim Executables](#reflectively-loading-nim-executables)
-  * [Executable size difference with the Winim Library](#executable-size-difference-when-using-the-winim-library-vs-without)
-  * [Opsec Considirations](#opsec-considerations)
-  * [Converting C Code to Nim](#converting-c-code-to-nim)
-  * [Language Bridges](#language-bridges)
-  * [Debugging](#debugging)
-  * [Setting up a dev environment](#setting-up-a-dev-environment)
-  * [Pitfalls I found myself falling into](#pitfalls-i-found-myself-falling-into)
-  * [Interesting Nim Libraries](#interesting-nim-libraries)
-  * [Nim for Implant Dev Links](#nim-for-implant-dev-links)
-  * [Contributors](#contributors)
+  - [Table of Contents](#table-of-contents)
+  - [Why Nim?](#why-nim)
+  - [Examples in this repo that work](#examples-in-this-repo-that-work)
+  - [Examples that are a WIP](#examples-that-are-a-wip)
+  - [Compiling the examples in this repo](#compiling-the-examples-in-this-repo)
+    - [Easy Way (Recommended)](#easy-way-recommended)
+    - [Hard way (For the bold)](#hard-way-for-the-bold)
+  - [Cross Compiling](#cross-compiling)
+  - [Interfacing with C/C++](#interfacing-with-cc)
+  - [Creating Windows DLLs with an exported `DllMain`](#creating-windows-dlls-with-an-exported-dllmain)
+    - [Creating XLLs](#creating-xlls)
+  - [Optimizing executables for size](#optimizing-executables-for-size)
+  - [Reflectively Loading Nim Executables](#reflectively-loading-nim-executables)
+  - [Executable size difference when using the Winim library vs without](#executable-size-difference-when-using-the-winim-library-vs-without)
+  - [Opsec Considerations](#opsec-considerations)
+  - [Writing Nim without the Nim Runtime](#writing-nim-without-the-nim-runtime)
+  - [Converting C code to Nim](#converting-c-code-to-nim)
+  - [Language Bridges](#language-bridges)
+  - [Debugging](#debugging)
+  - [Setting up a dev environment](#setting-up-a-dev-environment)
+  - [Pitfalls I found myself falling into](#pitfalls-i-found-myself-falling-into)
+  - [Interesting Nim libraries](#interesting-nim-libraries)
+  - [Nim for implant dev links](#nim-for-implant-dev-links)
+  - [Contributors](#contributors)
 
 ## Why Nim?
 
@@ -68,6 +72,7 @@ My experiments in weaponizing [Nim](https://nim-lang.org/) for implant developme
 | [shellcode_bin.nim](../master/src/shellcode_bin.nim) | Creates a suspended process and injects shellcode with `VirtualAllocEx`/`CreateRemoteThread`. Also demonstrates the usage of compile time definitions to detect arch, os etc..|
 | [shellcode_fiber.nim](../master/src/shellcode_fiber.nim) | Shellcode execution via fibers |
 | [shellcode_inline_asm_bin.nim](../master/src/shellcode_inline_asm_bin.nim) | Executes shellcode using inline assembly |
+| [ssdt_dump.nim](../master/src/ssdt_dump.nim) | Simple SSDT retrieval using runtime function table from exception directory. Technique inspired from [MDSEC](https://www.mdsec.co.uk/2022/04/resolving-system-service-numbers-using-the-exception-directory/) article |
 | [syscalls_bin.nim](../master/src/syscalls_bin.nim) | Shows how to make direct system calls |
 | [execute_powershell_bin.nim](../master/src/execute_powershell_bin.nim) | Hosts the CLR & executes PowerShell through an un-managed runspace |
 | [passfilter_lib.nim](../master/src/passfilter_lib.nim) | Log password changes to a file by (ab)using a password complexity filter |
@@ -92,8 +97,13 @@ My experiments in weaponizing [Nim](https://nim-lang.org/) for implant developme
 | [rsrc_section_shellcode.nim](../master/src/rsrc_section_shellcode.nim) | Execute shellcode embedded in the .rsrc section of the binary |
 | [token_steal_cmd.nim](../master/src/token_steal_cmd.nim) | Steal a token/impersonate and then run a command | 
 | [anti_analysis_isdebuggerpresent.nim](../master/src/anti_analysis_isdebuggerpresent.nim) | Simple anti-analysis that checks for a debugger | 
-| [sandbox_domain_check.nim](../master/src/sandbox_domain_check.nim) | Simple sandbox evasion technique, that checks if computer is connected to domain or not | 
-
+| [sandbox_domain_check.nim](../master/src/sandbox_domain_check.nim) | Simple sandbox evasion technique, that checks if computer is connected to domain or not |
+| [Hook.nim](../master/src/Hook.nim) | Offensive Hooking example for MessageBoxA | 
+| [anti_debug.nim](../master/src/anti_debug.nim) | Showcasing two anti debugging techniques | 
+| [anti_debug_via_tls.nim](../master/src/anti_debug_via_tls.nim) | Anti-debugging vis TLS |
+| [local_pe_execution.nim](../master/src/local_pe_execution.nim) | Execute exe and dll files in memory | 
+| [stack_string_allocation.nim](../master/src/stack_string_allocation.nim) | Allocate c and wide strings on the stack using arrays | 
+| [hardware_breakpoints.nim](../master/src/hardware_breakpoints.nim) | Hook functions using hardware breakpoints | 
 
 ## Examples that are a WIP
 
@@ -282,6 +292,12 @@ Because of how Nim resolves DLLs dynamically using `LoadLibrary` using it's FFI 
 If you compile Nim source to a DLL, seems like you'll always have an exported `NimMain`, no matter if you specify your own `DllMain` or not (??). This could potentially be used as a signature, don't know how many shops are actually using Nim in their development stack. Definitely stands out.
 
 ![](https://user-images.githubusercontent.com/5151193/99911079-4563cf00-2caf-11eb-960d-e500534b56dd.png)
+
+## Writing Nim without the Nim Runtime
+
+Since Nim is heavily flagged by Anti-Virus solutions, one way around this is writing Nim programs without the Nim runtime. [Writing Nim-less Nim](https://www.youtube.com/watch?v=EXX3HmCG3pw) is a talk given on the steps outlining how to write Nim code without the Nim and C runtime, source code from this talk is available [here](https://github.com/m4ul3r/writing_nimless). The talk follows and expands on [zimawhit3's](https://github.com/zimawhit3) work with [Bitmancer](https://github.com/zimawhit3/Bitmancer/tree/main).
+
+The premise is to rely on `winim`'s type definitions and leverage code writing that would not result in Nim's runtime being used. 
 
 ## Converting C code to Nim
 
